@@ -1,0 +1,44 @@
+from random import randint as rnd
+
+spots = [0 for x in range(8)]
+board = [0, 0, 0, 1, 0, 0, 2, 0]
+current = 0
+for x in range(1000):
+    Jail = False
+    die1 = rnd(1,2)
+    die2 = rnd(1,2)
+    sum = die1 + die2
+    current = current + sum
+    if current > 7:current -= 8
+    if board[current] == 2:
+        current = 2
+        Jail = True
+    if board[current] == 1:
+        chest = rnd(1, 16)
+        if chest == 1:
+            current = 0
+        elif chest == 2:
+            current = 2
+            Jail = True
+
+    if not Jail and die1 == die2:
+        die1 = rnd(1,2)
+        die2 = rnd(1,2)
+        sum = die1 + die2
+        current += sum
+        if current > 7: current -= 8
+        if die1 == die2:
+            current = 2
+        else:
+            if board[current] == 2:
+                current = 2
+            elif board[current] == 1:
+                chest = rnd(1,16)
+                if chest == 1:
+                    current = 0
+                elif chest == 2:
+                    current = 2
+    spots[current] += 1
+
+for space in spots:
+    print(space/250)
