@@ -1,0 +1,400 @@
+import numpy as np
+from random import randint as rnd
+import matplotlib.pyplot as plt
+import xlsxwriter as xl
+#0 = nothing
+#1 = chance
+#2 = community chest
+#3 = go to jail
+Names  = ["GO", "Old kent road", "Community Chest", "WhiteChaple road", "Income Tax", "Kings Cross Station", "The Angel, Islington", "Chance",
+          "Euston Road", "Pentonville Road", "Just Visiting/ Jail", "Pall Mall", "Electric Company", "Whitehall", "Northumberln'd avenue",
+          "Marylebone Station", "Bow Street", "Community Chest", "Marlborough Street", "Vine Street", "Free Parking", "Strand", "Chance", "Fleet Street",
+          "Trafalgar Square", "Fenchurch St. Station", "Leicester Square", "Coventry Street", "Water Works", "Picadilly", "Go to Jail", "Regent Street",
+          "Oxford Street", "Community Chest", "Bond street", "Liverpool St. Station", "Chance", "Park Lane", "Super Tax", "Mayfair"]
+Board = [0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0]
+Chance = [24, 11, 0, 39, 5]
+ProbsDoub = [0, 0.0278, 0, 0.0278, 0, 0.0278, 0, 0.0278, 0, 0.0278, 0, 0.0278]
+ProbsSing = [0, 0, 0.0556, 0.0556, 0.1111, 0.1111, 0.1667, 0.1111, 0.1111, 0.0556, 0.0556, 0]
+ProbsAll = [0, 0.0278, 0.0556, 0.0833, 0.1111, 0.1389, 0.1667, 0.1389, 0.1111, 0.0833, 0.0556, 0.0278]
+ProbsChance = [6/16, 1/16, 2/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16]
+ProbsEnd = np.zeros([160])
+ProbsTotal = np.zeros([40])
+PropsOverAll = np.empty([40, 40])
+population = np.zeros([40])
+population[0] = 4
+
+def AddChance(step, x, z):
+    if step < 12 or step > 28:
+        ProbsEnd[12] += ProbsSing[x] * (1 / 16) * z
+    elif step > 12 and step < 28:
+        ProbsEnd[28] += ProbsSing[x] * (1 / 16) * z
+    if step < 5 or step > 35:
+        ProbsEnd[5] += ProbsSing[x] * (2 / 16) * z
+    elif step > 5 and step < 15:
+        ProbsEnd[15] += ProbsSing[x] * (2 / 16) * z
+    elif step > 15 and step < 25:
+        ProbsEnd[25] += ProbsSing[x] * (2 / 16) * z
+    elif step > 25 and step < 35:
+        ProbsEnd[35] += ProbsSing[x] * (2 / 16) * z
+    h = step - 3
+    if h < 0: h += 40
+    ProbsEnd[h] += ProbsSing[x] * (1 / 16) * z
+    ProbsEnd[24] += ProbsSing[x] * (1 / 16) * z
+    ProbsEnd[11] += ProbsSing[x] * (1 / 16) * z
+    ProbsEnd[0] += ProbsSing[x] * (1 / 16) * z
+    ProbsEnd[39] += ProbsSing[x] * (1 / 16) * z
+    ProbsEnd[5] += ProbsSing[x] * (1 / 16) * z
+    ProbsEnd[10] += ProbsAll[x] * (1/16) * z
+
+def AddChest(x, z):
+    ProbsEnd[10]+= ProbsAll[x] * z * (1/16)
+    ProbsEnd[10] -= (1/216) * ProbsAll[x] * z * (1/16)
+    ProbsEnd[0] += ProbsSing[x] * z * (1/16)
+
+def calculate_probabilities(start, multiplier, x):
+    Chance = False
+    Chest = False
+    Jail = False
+    if Board[start] == 3:
+        Jail = True
+        ProbsEnd[10] += ProbsAll[x] * multiplier
+    if Board[start] == 4:
+        Jail = True
+    if Board[start] == 1:
+        Chance = True
+        ProbsEnd[start] += ProbsSing[x] * (6/16) * multiplier
+        AddChance(start, x, multiplier)
+    elif Board[start] == 2:
+        Chest = True
+        ProbsEnd[start] += ProbsSing[x] * (14/16) * multiplier
+    else:
+        ProbsEnd[step] += ProbsSing[x] * multiplier
+
+    return Chance, Chest, Jail
+
+def ThirdRoll (multiplier, start, x, y, Rail2, Util2):
+    for z in range(12):
+        _, _, _ = calculate_probabilities(start + z, (6 / 16) * multiplier * ProbsSing[z], z)
+        _, _, _ = calculate_probabilities(24 + z,  (1 / 16) * multiplier * ProbsSing[z], z)
+        _, _, _ = calculate_probabilities(11 + z, (1 / 16) * multiplier * ProbsSing[z], z)
+        _, _, _ = calculate_probabilities(0 + z, (1 / 16) * multiplier * ProbsSing[z], z)
+        _, _, _ = calculate_probabilities(39 + z, (1 / 16) * multiplier * ProbsSing[z], z)
+        _, _, _ = calculate_probabilities(5 + z, (1 / 16) * multiplier * ProbsSing[z], z)
+        _, _, _ = calculate_probabilities(Rail2 + z, (2 / 16) * multiplier * ProbsSing[z],
+                                          z)
+        _, _, _ = calculate_probabilities(Util2 + z, (1 / 16) * multiplier * ProbsSing[z],
+                                          z)
+        h = start - 3
+        if start < 0: start += 40
+        if start > 40: start -= 40
+        _, _, _ = calculate_probabilities(h + z, (1 / 16) * multiplier * ProbsSing[z], z)
+        ProbsEnd[10] += (6 / 16) * (1 / 16) * ProbsDoub[x] * ProbsDoub[y]
+
+def ThirdRollChest(multiplier, start, x, y):
+    for z in range(12):
+        _, _, _ = calculate_probabilities(start + z, (14/16) * multiplier * ProbsSing[z], x)
+
+def ThirdTollNormal(multiplier, start, x, y):
+    for z in range(12):
+        ProbsEnd[start + z] += multiplier * ProbsSing[z]
+
+for current in range(40):
+    ProbsEnd = np.zeros([160])
+    ProbsTotal = np.zeros([40])
+    for x in range(12):
+        step = current + x + 1
+        if step > 39:
+            step = step - 40
+        Chance = False
+        Chest =  False
+        Jail = False
+        if Board[step] == 3:
+            Jail = True
+            ProbsEnd[10] += ProbsAll[x]
+        if Board[step]:
+            Jail = True
+        if Board[step] == 1:
+            Chance =  True
+            ProbsEnd[step] += ProbsSing[x] * (6/16)
+            AddChance(current, x, 1)
+        elif Board[step] == 2:
+            Chest = True
+            ProbsEnd[step] += ProbsSing[x] * (14/16)
+            AddChest(x, 1)
+        else:
+            ProbsEnd[step] += ProbsSing[x]
+        if step < 12 or step > 28: Util = 12
+        elif step > 12 and step < 28: Util = 28
+        else: Util = step
+        if step < 5 or step > 35: Rail = 5
+        elif step > 5 and step < 15: Rail = 15
+        elif step > 15 and step < 25: Rail = 25
+        elif step > 25 and step < 35: Rail = 35
+        else: Rail = step
+        shift = step - 3
+        if shift < 0: shift += 40
+
+        if not Jail:
+            for y in range(12):
+                step = current + x + y + 2
+                if step > 39:
+                    step -= 40
+                if Chance:
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (6/16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = 24 + y + 1
+                    if step > 39: step -= 40
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (1 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((1 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((1/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = 11 + y + 1
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (1 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((1 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((1/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = 0 + y + 1
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (1 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((1 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((1/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = 39 + y + 1
+                    if step > 39: step -= 40
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (1 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((1 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((1/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = 5 + y + 1
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (1 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((1 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((1/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = Rail + y + 1
+                    if step > 39: step -= 40
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (2 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((2 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((2/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = Util + y + 1
+                    if step > 39: step -= 40
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (1 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((1 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((1/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = shift + y
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (1 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((1 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((1/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    ProbsEnd[10] += ProbsAll[y] * ProbsDoub[x] * (1/16)
+                elif Chest:
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = current + x + y + 2
+                    if step > 39: step -= 40
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (14 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28:Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((14 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((14/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    #------------------------------------------------
+                    Chance2 = False
+                    Chest2 = False
+                    Jail = False
+                    step = 0 + y + 1
+                    if step > 39: step -= 40
+                    Chance2, Chest2, Jail = calculate_probabilities(step, (1 / 16) * ProbsDoub[x] * ProbsSing[y], y)
+                    if step < 12 or step > 28: Util2 = 12
+                    elif step > 12 and step < 28: Util2 = 28
+                    else: Util2 = step
+                    if step < 5 or step > 35: Rail2 = 5
+                    elif step > 5 and step < 15: Rail2 = 15
+                    elif step > 15 and step < 25: Rail2 = 25
+                    elif step > 25 and step < 35: Rail2 = 35
+                    else: Rail2 = step
+                    if not Jail:
+                        if Chance2:
+                            ThirdRoll((1 / 16) * ProbsDoub[x] * ProbsDoub[y], step, x, y, Rail2, Util2)
+                        elif Chest2:
+                            ThirdRollChest((1/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                        else:
+                            ThirdTollNormal((6/16) * ProbsDoub[x] * ProbsDoub[y], step, x, y)
+                    ProbsEnd[10] += ProbsAll[y] * ProbsDoub[x] * (1/16)
+                else:
+                    ProbsEnd[step] += ProbsDoub[x] * ProbsSing[y]
+                    ThirdTollNormal(ProbsDoub[x]*ProbsDoub[y], step, x, y)
+    ProbsEnd[10] += (1/216)
+    for a in range(40):
+        ProbsTotal[a] = ProbsEnd[a] + ProbsEnd[a + 40] + ProbsEnd[a + 80] + ProbsEnd[a + 120]
+    ProbsTotal[10] += ProbsTotal[30]
+    ProbsTotal[30] = 0
+    PropsOverAll[current, :] = ProbsTotal[:]
+
+book = xl.Workbook("Data matrix.xlsx")
+sheet = book.add_worksheet()
+for a in range(40):
+    sheet.write(a + 1, 0, Names[a])
+    sheet.write(0, a + 1, Names[a])
+
+for a in range(40):
+    for b in range(40):
+        sheet.write(a + 1, b + 1, PropsOverAll[a, b])
+
+book.close()
