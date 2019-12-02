@@ -1,0 +1,125 @@
+from random import randint as rnd
+import numpy as np
+import xlsxwriter as xl
+
+Board = [0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0]
+Landings = np.zeros([40])
+
+current = 0
+for x in range(10000):
+    Jail = False
+    cube1 = rnd(1, 6)
+    cube2 = rnd(1, 6)
+    sum = cube1 + cube2
+    current = sum + current
+    if current > 39: current -= 40
+    if Board[current] == 3:
+        Jail = True
+        current = 10
+    elif Board[current] == 1:
+        draw = rnd(1, 16)
+        if draw == 1:
+            current = 0
+        elif draw == 2:
+            current = 5
+        elif draw == 3:
+            current = 11
+        elif draw == 4:
+            current = 24
+        elif draw == 5:
+            current = 39
+        elif draw == 6:
+            current -= 3
+            if current < 0: current += 40
+        elif draw == 7:
+            current = 10
+            Jail = True
+    elif Board[current] == 2:
+        draw = rnd(1, 16)
+        if draw == 1:
+            current = 0
+        elif draw == 2:
+            Jail = True
+            current = 10
+    #################second roll################################
+    if cube1 == cube2 and not Jail:
+        cube1 = rnd(1, 6)
+        cube2 = rnd(1, 6)
+        sum = cube1 + cube2
+        current = sum + current
+        if current > 39: current -= 40
+        if Board[current] == 3:
+            Jail = True
+            current = 10
+        elif Board[current] == 1:
+            draw = rnd(1, 16)
+            if draw == 1:
+                current = 0
+            elif draw == 2:
+                current = 5
+            elif draw == 3:
+                current = 11
+            elif draw == 4:
+                current = 24
+            elif draw == 5:
+                current = 39
+            elif draw == 6:
+                current -= 3
+                if current < 0: current += 40
+            elif draw == 7:
+                current = 10
+                Jail = True
+        elif Board[current] == 2:
+            draw = rnd(1, 16)
+            if draw == 1:
+                current = 0
+            elif draw == 2:
+                Jail = True
+                current = 10
+        ################third roll########################
+        if cube1 == cube2 and not Jail:
+            cube1 = rnd(1, 6)
+            cube2 = rnd(1, 6)
+            sum = cube1 + cube2
+            current = sum + current
+            if current > 39: current -= 40
+            if Board[current] == 3 or cube1 == cube2:
+                current = 10
+            elif Board[current] == 1:
+                draw = rnd(1, 16)
+                if draw == 1:
+                    current = 0
+                elif draw == 2:
+                    current = 5
+                elif draw == 3:
+                    current = 11
+                elif draw == 4:
+                    current = 24
+                elif draw == 5:
+                    current = 39
+                elif draw == 6:
+                    current -= 3
+                    if current < 0: current += 40
+                elif draw == 7:
+                    current = 10
+            elif Board[current] == 2:
+                draw = rnd(1, 16)
+                if draw == 1:
+                    current = 0
+                elif draw == 2:
+                    current = 10
+    Landings[current] += 1
+
+for y in range(40):
+    Landings[y] = Landings[y]/10000
+
+print(Landings)
+
+book = xl.Workbook("ExperimentalDist.xlsx")
+sheet = book.add_worksheet()
+
+for z in range(40):
+    sheet.write(z, 1, Landings[z])
+
+book.close()
+
